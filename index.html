@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Giám sát camera</title>
+<link rel="stylesheet" href="css/camera.css"></head>
+<body>
+<header><h1>📹 Giám sát camera</h1>
+<nav id="nav">
+<button data-tab="overview" class="on">Tổng quan</button>
+<button data-tab="discover">Dò tìm camera</button>
+<button data-tab="cams">Camera đã kết nối</button>
+<button data-tab="live">Giám sát trực tiếp</button>
+<button data-tab="settings">Cài đặt</button></nav></header>
+<main>
+<section id="tab-overview" class="tab on">
+<div class="stats">
+<div class="card"><b id="s-total">0</b><span>Camera đã lưu</span></div>
+<div class="card"><b id="s-live">0</b><span>Đang phát</span></div>
+<div class="card"><b id="s-dev">0</b><span>Webcam phát hiện</span></div></div>
+<div class="card note"><h2>Giới hạn của trình duyệt</h2><ul>
+<li>Trình duyệt <b>không thể quét mạng LAN</b> hay dùng ONVIF/UDP multicast, nên không thể tự tìm camera IP. Bạn cần nhập địa chỉ luồng thủ công.</li>
+<li><b>RTSP không phát được trực tiếp</b>. Hãy chuyển RTSP sang HLS hoặc WebRTC bằng go2rtc hoặc MediaMTX.</li>
+<li>Hỗ trợ: webcam/USB, MJPEG, HLS, WebRTC (WHEP). Trang HTTPS chỉ tải được luồng HTTPS.</li>
+<li>Mật khẩu chỉ giữ trong bộ nhớ của phiên hiện tại, không lưu vào máy.</li></ul></div>
+</section>
+
+<section id="tab-discover" class="tab">
+<div class="card"><h2>Webcam máy tính và USB</h2>
+<p>Bấm nút để cấp quyền, trình duyệt sẽ liệt kê các camera đang cắm vào máy.</p>
+<button class="pri" id="btn-scan">Cấp quyền và dò webcam</button>
+<div id="devs" class="list"></div>
+<div class="preview"><div id="prev-box" class="box"><p class="ph">Chưa xem thử camera nào</p></div>
+<div class="row"><span class="badge idle" data-st="prev">Đã dừng</span><button id="btn-prev-stop">Dừng xem thử</button></div></div></div>
+<div class="card"><h2>Camera IP</h2>
+<p>Trình duyệt không được phép quét mạng nội bộ. Vì vậy camera IP phải được thêm thủ công với địa chỉ MJPEG, HLS hoặc WebRTC.</p>
+<button class="pri" data-act="add">+ Thêm camera IP</button></div>
+</section>
+
+<section id="tab-cams" class="tab"><div class="row"><h2>Camera đã kết nối</h2><button class="pri" data-act="add">+ Thêm camera</button></div><div id="cam-list" class="list"></div></section>
+
+<section id="tab-live" class="tab">
+<div class="row"><select id="live-filter" aria-label="Chọn camera"></select>
+<button id="btn-all-start">Bắt đầu tất cả</button><button id="btn-all-stop">Dừng tất cả</button></div>
+<div id="grid" class="grid"></div></section>
+
+<section id="tab-settings" class="tab"><div class="card"><h2>Cài đặt</h2>
+<label>Thời gian chờ trước khi tự kết nối lại (giây)<input id="cfg-retry" type="number" min="2" max="120"></label>
+<button id="btn-clear" class="danger">Xóa toàn bộ dữ liệu đã lưu</button>
+<p class="hint">Chỉ lưu tên, loại, địa chỉ và tên đăng nhập. Mật khẩu không bao giờ được lưu.</p></div></section>
+</main>
+
+<dialog id="dlg"><form method="dialog" id="frm"><h2 id="dlg-title">Camera</h2>
+<label>Tên camera<input id="f-name" required maxlength="40"></label>
+<label>Loại<select id="f-type">
+<option value="usb">Webcam / USB</option><option value="mjpeg">IP – MJPEG</option>
+<option value="hls">IP – HLS (.m3u8)</option><option value="webrtc">IP – WebRTC (WHEP)</option></select></label>
+<label class="g-usb">Thiết bị<select id="f-dev"></select></label>
+<label class="g-ip">Địa chỉ luồng<input id="f-url" placeholder="https://..."></label>
+<label class="g-ip">Tên đăng nhập (nếu có)<input id="f-user" autocomplete="off"></label>
+<label class="g-ip">Mật khẩu (chỉ giữ trong phiên này)<input id="f-pw" type="password" autocomplete="new-password"></label>
+<p class="hint g-ip" id="f-hint"></p>
+<div class="box small" id="test-box"></div>
+<div class="row"><span class="badge idle" data-st="test">Chưa thử</span><span id="test-msg" class="hint"></span></div>
+<div class="row end"><button type="button" id="btn-test">Thử kết nối</button><button type="button" id="btn-cancel">Hủy</button><button class="pri" id="btn-save" value="x">Lưu</button></div>
+</form></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="js/camera.js"></script>
+</body></html>
