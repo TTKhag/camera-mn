@@ -128,7 +128,7 @@ const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelect
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const TYPES={usb:'Webcam / USB',mjpeg:'IP – MJPEG',hls:'IP – HLS',webrtc:'IP – WebRTC (WHEP)'};
-const LBL={idle:'Đã dừng',connecting:'Đang kết nối…',live:'Đang phát',error:'Lỗi – đang thử lại'};
+const LBL={idle:'Đã dừng',connecting:'Đang kết nối…',live:'Đang phát',error:'Lỗi kết nối'};
 const HINT={mjpeg:'Ví dụ: https://camera.example/video.mjpg. MJPEG không gửi được mật khẩu qua trình duyệt; camera cần cho phép truy cập hoặc dùng máy chủ trung gian.',
  hls:'Ví dụ: https://máy-chủ/cam1/index.m3u8. Máy chủ phải bật CORS.',
  webrtc:'Ví dụ: https://máy-chủ:8889/cam1/whep (go2rtc, MediaMTX). Máy chủ phải bật CORS.'};
@@ -140,7 +140,7 @@ const msg=e=>ERR[e.name]||e.message||'Lỗi không xác định.';
 let tt;function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(tt);tt=setTimeout(()=>e.style.display='none',4000)}
 
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d){S.cams=d.cams||[];S.nets=d.nets||[];S.cfg={...S.cfg,...d.cfg}}}catch{}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({cams:S.cams.map(({id,name,type,deviceId,url,user})=>({id,name,type,deviceId,url,user})),cfg:S.cfg,nets:S.nets}))}catch{toast('Không lưu được dữ liệu trên trình duyệt này.')}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({cams:S.cams.map(({id,name,type,deviceId,label,url,user})=>({id,name,type,deviceId,label,url,user})),cfg:S.cfg,nets:S.nets}))}catch{toast('Không lưu được dữ liệu trên trình duyệt này.')}}
 
 function parseUrl(raw){
   let u;try{u=new URL(raw)}catch{throw new Error('Địa chỉ không hợp lệ.')}
@@ -156,12 +156,23 @@ const timeout=(ms,t)=>new Promise((_,no)=>setTimeout(()=>no(new Error(t)),ms));
 let hlsP;const loadHls=()=>hlsP||(hlsP=new Promise((ok,no)=>{document.head.append(el('script',{src:HLS_URL,onload:ok,onerror:()=>{hlsP=null;no(new Error('Không tải được thư viện HLS.'))}}))}));
 
 // ---- Phát video ----
+const gum=id=>navigator.mediaDevices.getUserMedia({video:id?{deviceId:{exact:id}}:true,audio:false});
+async function usbStream(c){
+  try{return await gum(c.deviceId)}
+  catch(e){
+    if(e.name!=='OverconstrainedError'&&e.name!=='NotFoundError')throw e;
+    let alt=null;
+    if(c.label){try{(await gum()).getTracks().forEach(t=>t.stop());alt=(await navigator.mediaDevices.enumerateDevices()).find(d=>d.kind==='videoinput'&&d.label===c.label)}catch{}}
+    if(!alt){const x=new Error(`Camera “${c.label||c.name}” được lưu trên thiết bị khác (hoặc đã bị rút ra) nên không dùng được ở đây. Hãy bấm “Sửa” rồi chọn lại webcam của thiết bị này.`);x.name='NoRetry';throw x}
+    const st=await gum(alt.deviceId);c.deviceId=alt.deviceId;if(S.cams.includes(c))save();return st;
+  }
+}
 async function open(r){
   const c=r.cam,box=r.box;box.querySelectorAll('video,img,.ph').forEach(n=>n.remove());
   const mkv=()=>{const v=el('video',{autoplay:true,muted:true,playsInline:true});box.prepend(v);return v};
   if(c.type==='usb'){
     if(!navigator.mediaDevices?.getUserMedia)throw new Error('Trình duyệt không hỗ trợ camera hoặc trang chưa chạy HTTPS.');
-    const st=await navigator.mediaDevices.getUserMedia({video:c.deviceId?{deviceId:{exact:c.deviceId}}:true,audio:false});
+    const st=await usbStream(c);
     const v=mkv();v.srcObject=st;
     r.clean=()=>{st.getTracks().forEach(t=>t.stop());v.srcObject=null;v.remove()};
     st.getVideoTracks()[0].onended=()=>r.fail(new Error('Camera đã bị ngắt kết nối.'));
@@ -214,7 +225,7 @@ function setSt(r,s,m=''){
 async function attempt(r){
   r.clean();r.clean=()=>{};setSt(r,'connecting');
   try{await Promise.race([open(r),new Promise((_,no)=>r.rej=no)]);setSt(r,'live')}
-  catch(e){r.clean();r.clean=()=>{};setSt(r,'error',msg(e));if(!r.once&&e.name!=='NotAllowedError')retry(r)}
+  catch(e){r.clean();r.clean=()=>{};setSt(r,'error',msg(e));if(!r.once&&e.name!=='NotAllowedError'&&e.name!=='NoRetry')retry(r)}
   finally{r.rej=null}
 }
 function retry(r){if(!r.want)return;clearTimeout(r.t);r.t=setTimeout(()=>r.want&&attempt(r),S.cfg.retry*1000)}
@@ -273,7 +284,7 @@ function openForm(c={}){
 function formType(){const u=$('#f-type').value==='usb';$$('.g-usb').forEach(e=>e.hidden=!u);$$('.g-ip').forEach(e=>e.hidden=u);$('#f-hint').textContent=HINT[$('#f-type').value]||''}
 function formCam(id){
   const type=$('#f-type').value,c={id,name:$('#f-name').value.trim()||'Camera',type};
-  if(type==='usb')c.deviceId=$('#f-dev').value;else{c.url=$('#f-url').value.trim();c.user=$('#f-user').value.trim();parseUrl(c.url)}
+  if(type==='usb'){c.deviceId=$('#f-dev').value;c.label=$('#f-dev').selectedOptions[0]?.textContent||''}else{c.url=$('#f-url').value.trim();c.user=$('#f-user').value.trim();parseUrl(c.url)}
   return c;
 }
 function closeForm(){stop('test');$('#dlg').close()}
@@ -317,7 +328,7 @@ function cleanCam(c){
   if(!c||!TYPES[c.type])return null;
   let id=cl(c.id,30).replace(/[^\w-]/g,'');if(!id||id==='test'||id==='prev')id=uid();
   const o={id,name:cl(c.name,40).trim()||'Camera',type:c.type};
-  if(c.type==='usb'){o.deviceId=cl(c.deviceId,300);return o}
+  if(c.type==='usb'){o.deviceId=cl(c.deviceId,300);o.label=cl(c.label,100);return o}
   try{const u=new URL(cl(c.url,500));if(!/^https?:$/.test(u.protocol)||u.username||u.password)return null;o.url=u.href}catch{return null}
   o.user=cl(c.user,60);return o;
 }
@@ -325,7 +336,7 @@ const cleanNet=n=>{const name=cl(n?.name,40).trim();return name?{name,note:cl(n.
 const hasNet=name=>S.nets.some(n=>n.name.toLowerCase()===name.trim().toLowerCase());
 function backup(){
   const d={app:'camdash',version:1,exportedAt:new Date().toISOString(),cfg:S.cfg,nets:S.nets,
-    cams:S.cams.map(({id,name,type,deviceId,url,user})=>({id,name,type,deviceId,url,user}))};
+    cams:S.cams.map(({id,name,type,deviceId,label,url,user})=>({id,name,type,deviceId,label,url,user}))};
   const a=el('a',{href:URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'})),download:`camera-sao-luu-${d.exportedAt.slice(0,10)}.json`});
   document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);toast('Đã tạo bản sao lưu.');
 }
