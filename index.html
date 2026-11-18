@@ -26,6 +26,7 @@ label{display:block;margin:10px 0;color:var(--m)}label input,label select{displa
 .box .msg{position:absolute;left:0;right:0;bottom:0;padding:4px 8px;font-size:12px;color:#fff;background:rgba(220,38,38,.85);display:none}.box .msg:not(:empty){display:block}
 .ph{padding:8px;text-align:center}.badge{font-size:12px;padding:2px 8px;border-radius:99px;color:#fff;background:#6b7280}
 .badge.live{background:var(--ok)}.badge.error{background:var(--er)}.badge.connecting{background:var(--wa)}
+textarea{width:100%;min-height:72px;font:12px monospace;background:var(--c);color:var(--t);border:1px solid var(--b);border-radius:8px;padding:8px;margin:6px 0}
 [hidden]{display:none!important}
 dialog{border:1px solid var(--b);border-radius:14px;background:var(--c);color:var(--t);width:min(440px,94vw)}dialog::backdrop{background:#0008}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#111;color:#fff;padding:8px 16px;border-radius:8px;display:none;max-width:90vw;z-index:9}
@@ -37,6 +38,7 @@ dialog{border:1px solid var(--b);border-radius:14px;background:var(--c);color:va
 <button data-tab="discover">Dò tìm camera</button>
 <button data-tab="cams">Camera đã kết nối</button>
 <button data-tab="live">Giám sát trực tiếp</button>
+<button data-tab="share">Chia sẻ từ xa</button>
 <button data-tab="settings">Cài đặt</button></nav></header>
 <main>
 <section id="tab-overview" class="tab on">
@@ -70,10 +72,36 @@ dialog{border:1px solid var(--b);border-radius:14px;background:var(--c);color:va
 <button id="btn-all-start">Bắt đầu tất cả</button><button id="btn-all-stop">Dừng tất cả</button></div>
 <div id="grid" class="grid"></div></section>
 
+<section id="tab-share" class="tab">
+<div class="card"><h2>Mạng được cấp phép</h2>
+<p>Trình duyệt không đọc được tên Wi-Fi đang dùng, nên bạn tự nhập tên mạng. Chỉ yêu cầu xem từ mạng có tên trong danh sách này mới được chấp nhận. Danh sách nằm trong bản sao lưu.</p>
+<div class="row"><input id="n-name" placeholder="Tên Wi-Fi, ví dụ: Nhà Hoa" maxlength="40"><input id="n-note" placeholder="Ghi chú (không bắt buộc)" maxlength="60"><button class="pri" id="btn-net-add">Cấp phép</button></div>
+<div id="net-list" class="list"></div></div>
+<div class="card"><h2>Xem camera ở mạng khác</h2>
+<p>Không cần máy chủ: hai bên trao đổi mã bằng tay (Zalo, tin nhắn…). Kết nối trực tiếp qua WebRTC, dùng máy chủ STUN công cộng của Google để vượt NAT. Nếu một bên dùng mạng di động hoặc NAT nghiêm ngặt, kết nối có thể thất bại vì không có máy chủ TURN.</p>
+<label>Tên Wi-Fi của bạn<input id="my-net" maxlength="40"></label>
+<button id="btn-req">1. Tạo mã yêu cầu</button>
+<textarea id="req-out" readonly placeholder="Mã yêu cầu sẽ hiện ở đây. Gửi cho chủ camera."></textarea><button data-copy="req-out">Sao chép mã</button>
+<label>2. Dán mã trả lời từ chủ camera<textarea id="ans-in"></textarea></label><button class="pri" id="btn-ans">Kết nối</button>
+<div id="remote" class="grid"></div></div>
+<div class="card"><h2>Chia sẻ webcam của tôi</h2>
+<p>Chỉ chia sẻ được webcam/USB của máy này. Mỗi lần chia sẻ đều cần bạn xác nhận. Giữ trang này mở trong lúc chia sẻ.</p>
+<label>Webcam muốn chia sẻ<select id="sh-dev"></select></label>
+<label>Dán mã yêu cầu từ người xem<textarea id="sh-in"></textarea></label>
+<button class="pri" id="btn-share">Kiểm tra và tạo mã trả lời</button>
+<textarea id="sh-out" readonly placeholder="Mã trả lời sẽ hiện ở đây. Gửi lại cho người xem."></textarea><button data-copy="sh-out">Sao chép mã</button>
+<div id="sh-list" class="list"></div></div></section>
+
 <section id="tab-settings" class="tab"><div class="card"><h2>Cài đặt</h2>
 <label>Thời gian chờ trước khi tự kết nối lại (giây)<input id="cfg-retry" type="number" min="2" max="120"></label>
 <button id="btn-clear" class="danger">Xóa toàn bộ dữ liệu đã lưu</button>
-<p class="hint">Chỉ lưu tên, loại, địa chỉ và tên đăng nhập. Mật khẩu không bao giờ được lưu.</p></div></section>
+<p class="hint">Chỉ lưu tên, loại, địa chỉ và tên đăng nhập. Mật khẩu không bao giờ được lưu.</p></div>
+<div class="card"><h2>Sao lưu và khôi phục</h2>
+<p>Bản sao lưu gồm camera, cài đặt và mạng được cấp phép. Không chứa mật khẩu, nên bạn nhập lại mật khẩu sau khi khôi phục. Webcam/USB có thể cần chọn lại thiết bị trên máy mới.</p>
+<button class="pri" id="btn-bk">Tải bản sao lưu</button>
+<label>Chọn tệp sao lưu (.json)<input id="rs-file" type="file" accept=".json,application/json"></label>
+<label>Cách khôi phục<select id="rs-mode"><option value="merge">Gộp với dữ liệu hiện tại</option><option value="replace">Khôi phục tất cả (thay thế dữ liệu hiện tại)</option></select></label>
+<button id="btn-rs">Khôi phục</button></div></section>
 </main>
 
 <dialog id="dlg"><form method="dialog" id="frm"><h2 id="dlg-title">Camera</h2>
@@ -95,7 +123,7 @@ dialog{border:1px solid var(--b);border-radius:14px;background:var(--c);color:va
 'use strict';
 // Giám sát camera – chạy hoàn toàn trên trình duyệt (GitHub Pages).
 const KEY='camdash.v1', HLS_URL='https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js';
-const S={cams:[],cfg:{retry:5},devs:[],run:new Map(),pw:{},editId:null};
+const S={nets:[],shares:new Map(),remotes:new Map(),pending:null,cams:[],cfg:{retry:5},devs:[],run:new Map(),pw:{},editId:null};
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
@@ -111,8 +139,8 @@ const ERR={NotAllowedError:'Bạn đã chặn quyền camera. Hãy bấm biểu 
 const msg=e=>ERR[e.name]||e.message||'Lỗi không xác định.';
 let tt;function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(tt);tt=setTimeout(()=>e.style.display='none',4000)}
 
-function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d){S.cams=d.cams||[];S.cfg={...S.cfg,...d.cfg}}}catch{}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({cams:S.cams.map(({id,name,type,deviceId,url,user})=>({id,name,type,deviceId,url,user})),cfg:S.cfg}))}catch{toast('Không lưu được dữ liệu trên trình duyệt này.')}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d){S.cams=d.cams||[];S.nets=d.nets||[];S.cfg={...S.cfg,...d.cfg}}}catch{}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({cams:S.cams.map(({id,name,type,deviceId,url,user})=>({id,name,type,deviceId,url,user})),cfg:S.cfg,nets:S.nets}))}catch{toast('Không lưu được dữ liệu trên trình duyệt này.')}}
 
 function parseUrl(raw){
   let u;try{u=new URL(raw)}catch{throw new Error('Địa chỉ không hợp lệ.')}
@@ -201,7 +229,7 @@ function stop(id){const r=S.run.get(id);if(!r)return;r.want=false;clearTimeout(r
 // ---- Thiết bị webcam ----
 async function refreshDevices(){
   try{S.devs=navigator.mediaDevices?.enumerateDevices?(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput'):[]}catch{S.devs=[]}
-  renderDevices();renderStats();
+  renderDevices();fillShDev();renderStats();
 }
 async function scan(){
   if(!navigator.mediaDevices?.getUserMedia)return toast('Trình duyệt không hỗ trợ camera hoặc trang chưa chạy HTTPS.');
@@ -281,6 +309,109 @@ function bind(){
     toast(S.devs.length>n?'Đã phát hiện camera mới được cắm vào.':S.devs.length<n?'Một camera đã bị rút ra.':'Danh sách camera đã thay đổi.')});
   addEventListener('pagehide',()=>[...S.run.keys()].forEach(stop));
 }
-load();bind();$('#cfg-retry').value=S.cfg.retry;renderCams();refreshDevices();
+
+// ---- Sao lưu / khôi phục ----
+const cl=(v,n)=>typeof v==='string'?v.slice(0,n):'';
+const uid=()=>'c'+Math.random().toString(36).slice(2,9);
+function cleanCam(c){
+  if(!c||!TYPES[c.type])return null;
+  let id=cl(c.id,30).replace(/[^\w-]/g,'');if(!id||id==='test'||id==='prev')id=uid();
+  const o={id,name:cl(c.name,40).trim()||'Camera',type:c.type};
+  if(c.type==='usb'){o.deviceId=cl(c.deviceId,300);return o}
+  try{const u=new URL(cl(c.url,500));if(!/^https?:$/.test(u.protocol)||u.username||u.password)return null;o.url=u.href}catch{return null}
+  o.user=cl(c.user,60);return o;
+}
+const cleanNet=n=>{const name=cl(n?.name,40).trim();return name?{name,note:cl(n.note,60)}:null};
+const hasNet=name=>S.nets.some(n=>n.name.toLowerCase()===name.trim().toLowerCase());
+function backup(){
+  const d={app:'camdash',version:1,exportedAt:new Date().toISOString(),cfg:S.cfg,nets:S.nets,
+    cams:S.cams.map(({id,name,type,deviceId,url,user})=>({id,name,type,deviceId,url,user}))};
+  const a=el('a',{href:URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'})),download:`camera-sao-luu-${d.exportedAt.slice(0,10)}.json`});
+  document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);toast('Đã tạo bản sao lưu.');
+}
+async function restore(){
+  const f=$('#rs-file').files[0];if(!f)return toast('Hãy chọn tệp sao lưu trước.');
+  if(f.size>2e6)return toast('Tệp quá lớn, không phải bản sao lưu hợp lệ.');
+  let d;try{d=JSON.parse(await f.text())}catch{return toast('Tệp không phải là bản sao lưu hợp lệ.')}
+  if(d?.app!=='camdash'||!Array.isArray(d.cams))return toast('Tệp này không phải bản sao lưu của ứng dụng.');
+  const cams=d.cams.map(cleanCam).filter(Boolean),skip=d.cams.length-cams.length;
+  const nets=(Array.isArray(d.nets)?d.nets:[]).map(cleanNet).filter(Boolean);
+  if($('#rs-mode').value==='replace'){
+    if(!confirm('Thay thế toàn bộ camera, mạng được cấp phép và cài đặt hiện tại bằng bản sao lưu?'))return;
+    S.cams.forEach(c=>stop(c.id));S.cams=cams;S.nets=nets;S.cfg={...S.cfg,retry:Math.min(120,Math.max(2,+d.cfg?.retry||5)),myNet:cl(d.cfg?.myNet,40)};
+    toast(`Đã khôi phục ${cams.length} camera, ${nets.length} mạng.`+(skip?` Bỏ qua ${skip} mục không hợp lệ.`:''));
+  }else{
+    let a=0,n=0;
+    for(const c of cams){if(S.cams.some(x=>x.id===c.id||(c.url&&x.type===c.type&&x.url===c.url)))continue;S.cams.push(c);a++}
+    for(const x of nets){if(!hasNet(x.name)){S.nets.push(x);n++}}
+    toast(`Đã gộp: thêm ${a} camera, ${n} mạng mới.`+(skip?` Bỏ qua ${skip} mục không hợp lệ.`:''));
+  }
+  save();renderCams();renderNets();$('#rs-file').value='';
+}
+
+// ---- Mạng được cấp phép và chia sẻ ngang hàng (P2P, trao đổi mã bằng tay) ----
+function renderNets(){
+  $('#net-list').innerHTML=S.nets.length?S.nets.map((n,i)=>`<div class="item"><div><b>${esc(n.name)}</b><small>${esc(n.note)}</small></div><button class="danger" data-i="${i}">Thu hồi</button></div>`).join(''):'<p>Chưa có mạng nào được cấp phép.</p>';
+  $('#my-net').value=S.cfg.myNet||'';
+}
+function fillShDev(){$('#sh-dev').innerHTML=S.devs.map((d,i)=>`<option value="${esc(d.deviceId)}">${esc(devName(d,i))}</option>`).join('')||'<option value="">Chưa có webcam – hãy dò webcam trước</option>'}
+const enc=o=>btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+const dec=s=>{try{const o=JSON.parse(decodeURIComponent(escape(atob(s.trim()))));if(o?.v===1&&typeof o.sdp==='string'&&o.sdp.startsWith('v=0')&&o.sdp.length<30000)return o}catch{}return null};
+const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
+const gathered=pc=>Promise.race([new Promise(ok=>{if(pc.iceGatheringState==='complete')ok();pc.onicegatheringstatechange=()=>pc.iceGatheringState==='complete'&&ok()}),new Promise(ok=>setTimeout(ok,4000))]);
+async function makeReq(){
+  const net=$('#my-net').value.trim();if(!net)return toast('Hãy nhập tên Wi-Fi của bạn.');
+  if(!window.RTCPeerConnection)return toast('Trình duyệt không hỗ trợ WebRTC.');
+  S.cfg.myNet=net;save();S.pending?.close();
+  const pc=S.pending=new RTCPeerConnection(ICE);pc.addTransceiver('video',{direction:'recvonly'});
+  await pc.setLocalDescription(await pc.createOffer());await gathered(pc);
+  $('#req-out').value=enc({v:1,net:net.slice(0,40),sdp:pc.localDescription.sdp});toast('Đã tạo mã yêu cầu. Hãy gửi cho chủ camera.');
+}
+async function connAns(){
+  const o=dec($('#ans-in').value),pc=S.pending;
+  if(!pc)return toast('Hãy tạo mã yêu cầu trước.');if(!o)return toast('Mã trả lời không hợp lệ.');
+  S.pending=null;const id='r'+Date.now().toString(36);
+  const box=el('div',{className:'panel'});
+  box.innerHTML=`<div class="box"><div class="msg"></div></div><div class="row"><b>${esc(cl(o.name,60)||'Camera từ xa')}</b><span class="badge connecting">${LBL.connecting}</span><button>Ngắt</button></div>`;
+  const v=el('video',{autoplay:true,muted:true,playsInline:true});$('.box',box).prepend(v);
+  const bd=$('.badge',box),set=(s,m='')=>{bd.className='badge '+s;bd.textContent=s==='error'?'Mất kết nối':LBL[s];$('.msg',box).textContent=m};
+  pc.ontrack=e=>{v.srcObject=e.streams[0]||new MediaStream([e.track])};v.onplaying=()=>set('live');
+  pc.onconnectionstatechange=()=>{if(['failed','closed'].includes(pc.connectionState))set('error','Không kết nối được. Hai mạng có thể không nối trực tiếp được (không có máy chủ TURN).')};
+  $('button',box).onclick=()=>{pc.close();v.srcObject=null;box.remove();S.remotes.delete(id)};
+  S.remotes.set(id,pc);$('#remote').append(box);
+  try{await pc.setRemoteDescription({type:'answer',sdp:o.sdp})}catch{set('error','Mã trả lời không khớp với mã yêu cầu.')}
+}
+async function doShare(){
+  const o=dec($('#sh-in').value);if(!o)return toast('Mã yêu cầu không hợp lệ.');
+  const net=cl(o.net,40).trim();
+  if(!hasNet(net))return toast(`Mạng “${net||'(trống)'}” chưa được cấp phép. Hãy thêm vào danh sách nếu bạn tin tưởng.`);
+  const devId=$('#sh-dev').value,label=$('#sh-dev').selectedOptions[0]?.textContent||'Webcam';
+  if(!devId)return toast('Chưa có webcam. Hãy dò webcam ở mục Dò tìm camera.');
+  if(!confirm(`Cho phép mạng “${net}” xem camera “${label}”?`))return;
+  let st;try{st=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:devId}},audio:false})}catch(e){return toast(msg(e))}
+  const pc=new RTCPeerConnection(ICE),id='s'+Date.now().toString(36);
+  try{await pc.setRemoteDescription({type:'offer',sdp:o.sdp});st.getTracks().forEach(t=>pc.addTrack(t,st));await pc.setLocalDescription(await pc.createAnswer());await gathered(pc)}
+  catch{st.getTracks().forEach(t=>t.stop());pc.close();return toast('Không xử lý được mã yêu cầu.')}
+  S.shares.set(id,{pc,st,net,label});
+  pc.onconnectionstatechange=()=>{if(['failed','closed'].includes(pc.connectionState))endShare(id);else renderShares()};
+  $('#sh-out').value=enc({v:1,name:label,sdp:pc.localDescription.sdp});$('#sh-in').value='';renderShares();toast('Đã tạo mã trả lời. Hãy gửi lại cho người xem.');
+}
+function endShare(id){const s=S.shares.get(id);if(!s)return;s.st.getTracks().forEach(t=>t.stop());s.pc.close();S.shares.delete(id);renderShares()}
+function renderShares(){
+  $('#sh-list').innerHTML=[...S.shares].map(([id,s])=>`<div class="item"><div><b>${esc(s.label)}</b> → ${esc(s.net)}<small>${s.pc.connectionState==='connected'?'Đang chia sẻ':'Đang chờ kết nối…'}</small></div><button class="danger" data-sid="${id}">Ngừng chia sẻ</button></div>`).join('');
+}
+function bind2(){
+  $('#btn-bk').onclick=backup;$('#btn-rs').onclick=restore;
+  $('#btn-net-add').onclick=()=>{const n=cleanNet({name:$('#n-name').value,note:$('#n-note').value});
+    if(!n)return toast('Hãy nhập tên Wi-Fi.');if(hasNet(n.name))return toast('Mạng này đã có trong danh sách.');
+    S.nets.push(n);save();renderNets();$('#n-name').value=$('#n-note').value=''};
+  $('#net-list').onclick=e=>{const i=e.target.dataset.i;if(i!=null&&confirm(`Thu hồi quyền của mạng “${S.nets[i].name}”?`)){S.nets.splice(i,1);save();renderNets()}};
+  $('#btn-req').onclick=()=>makeReq().catch(e=>toast(msg(e)));$('#btn-ans').onclick=()=>connAns().catch(e=>toast(msg(e)));
+  $('#btn-share').onclick=()=>doShare().catch(e=>toast(msg(e)));
+  $('#sh-list').onclick=e=>{if(e.target.dataset.sid)endShare(e.target.dataset.sid)};
+  document.addEventListener('click',e=>{const k=e.target.dataset.copy;if(k)navigator.clipboard.writeText($('#'+k).value).then(()=>toast('Đã sao chép.'),()=>toast('Không sao chép được, hãy chọn và sao chép thủ công.'))});
+  addEventListener('pagehide',()=>{[...S.shares.keys()].forEach(endShare);S.remotes.forEach(pc=>pc.close())});
+}
+load();bind();bind2();renderNets();$('#cfg-retry').value=S.cfg.retry;renderCams();refreshDevices();
 </script>
 </body></html>
